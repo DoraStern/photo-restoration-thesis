@@ -1,0 +1,11 @@
+torch>=2.0
+torchvision>=0.15
+pillow
+tqdm
+opencv-python-headless
+scikit-image
+scipy
+pandas
+numpy
+requests
+matplotlib

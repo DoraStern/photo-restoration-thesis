@@ -1,0 +1,18 @@
+# Data (large, regenerable via data_tools/ scripts -- not committed)
+data/
+FilmDamageSimulator/
+
+# Training outputs
+runs/
+eval_results/
+*.pt
+*.pth
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
