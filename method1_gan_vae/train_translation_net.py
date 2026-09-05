@@ -134,7 +134,9 @@ def main():
     parser.add_argument("--vae2-checkpoint", type=str, required=True)
     parser.add_argument("--real-photo-dir", type=str, required=True)
     parser.add_argument("--clean-dir", type=str, required=True)
-    parser.add_argument("--masks-dir", type=str, required=True)
+    parser.add_argument("--masks-dir", type=str, required=True, nargs="+",
+                         help="one or more mask folders; pass multiple to combine damage types kept "
+                              "in separate folders, e.g. --masks-dir ./data/masks/scratches ./data/masks/smut")
     parser.add_argument("--blend-mode", type=str, choices=["screen", "multiply"], default="screen")
     parser.add_argument("--out-dir", type=str, default="./runs/translation_net")
     parser.add_argument("--image-size", type=int, default=256)

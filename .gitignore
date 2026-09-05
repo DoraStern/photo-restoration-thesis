@@ -4,7 +4,7 @@ FilmDamageSimulator/
 
 # Training outputs
 runs/
-eval_results/
+eval_results*/
 *.pt
 *.pth
 

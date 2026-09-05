@@ -53,8 +53,9 @@ def save_comparison_grid(model, batch, out_path, device, max_images=6):
 def main():
     parser = argparse.ArgumentParser(description="Train the Stage 1 restoration U-Net.")
     parser.add_argument("--clean-dir", type=str, required=True, help="folder of clean photos (e.g. VOC2012 subset)")
-    parser.add_argument("--masks-dir", type=str, required=True,
-                         help="folder of masks from generate_synthetic_only.py (the generated/ output folder)")
+    parser.add_argument("--masks-dir", type=str, required=True, nargs="+",
+                         help="one or more mask folders; pass multiple to combine damage types kept "
+                              "in separate folders, e.g. --masks-dir ./data/masks/scratches ./data/masks/smut")
     parser.add_argument("--blend-mode", type=str, choices=["screen", "multiply"], default="screen",
                          help="'screen' (default) = light/white damage marks (realistic for scratches/abrasion); "
                               "'multiply' = dark damage marks (realistic for soot/smut/heavy dirt)")

@@ -25,6 +25,48 @@ import subprocess
 import sys
 
 
+def find_generator_script(simulator_dir):
+    """
+    Different people end up with different local layouts, so check the
+    plausible ones instead of assuming exactly one:
+      1. <simulator_dir>/damage_generator/generate_synthetic_only.py
+         -- the standard layout if simulator_dir is a full FilmDamageSimulator clone root
+      2. <simulator_dir>/generate_synthetic_only.py
+         -- if simulator_dir IS ALREADY the damage_generator folder itself
+         (e.g. you placed this script directly inside damage_generator/
+         alongside generate_synthetic_only.py, or passed --simulator-dir
+         pointing straight at that folder)
+
+    Returns (script_dir, script_path). Raises FileNotFoundError with a
+    clear explanation of both locations checked if neither has the file.
+    """
+    candidate_1 = os.path.join(simulator_dir, "damage_generator", "generate_synthetic_only.py")
+    candidate_2 = os.path.join(simulator_dir, "generate_synthetic_only.py")
+
+    if os.path.exists(candidate_1):
+        return os.path.join(simulator_dir, "damage_generator"), candidate_1
+    if os.path.exists(candidate_2):
+        return simulator_dir, candidate_2
+
+    raise FileNotFoundError(
+        f"Could not find generate_synthetic_only.py in either of these locations:\n"
+        f"  1. {os.path.abspath(candidate_1)}\n"
+        f"  2. {os.path.abspath(candidate_2)}\n"
+        f"\n"
+        f"--simulator-dir is currently: {os.path.abspath(simulator_dir)}\n"
+        f"\n"
+        f"generate_synthetic_only.py also needs its sibling files from the FilmDamageSimulator "
+        f"repo in the SAME folder as it (scans.py, helpers.py, unit_converter.py), and a "
+        f"synthetic/ folder containing the real damage-patch assets as a SIBLING of whatever "
+        f"folder generate_synthetic_only.py sits in -- not just the single .py file on its own. "
+        f"If you haven't already, clone the full repo:\n"
+        f"  git clone --depth 1 https://github.com/daniela997/FilmDamageSimulator.git\n"
+        f"then copy generate_synthetic_only.py into its damage_generator/ folder, and point "
+        f"--simulator-dir at the FilmDamageSimulator folder itself (the one containing both "
+        f"damage_generator/ and synthetic/)."
+    )
+
+
 def generate_type(damage_type, target_n, out_dir, simulator_dir, height, width, min_count, max_count):
     type_dir = os.path.join(out_dir, damage_type)
     os.makedirs(type_dir, exist_ok=True)
@@ -37,14 +79,7 @@ def generate_type(damage_type, target_n, out_dir, simulator_dir, height, width, 
     needed = target_n - len(existing)
     print(f"[{damage_type}] {len(existing)} present, generating {needed} more...")
 
-    generator_dir = os.path.join(simulator_dir, "damage_generator")
-    script_path = os.path.join(generator_dir, "generate_synthetic_only.py")
-    if not os.path.exists(script_path):
-        raise FileNotFoundError(
-            f"Could not find {script_path}. Clone FilmDamageSimulator and copy "
-            f"generate_synthetic_only.py into its damage_generator/ folder first -- see this "
-            f"script's docstring for the one-time setup command."
-        )
+    generator_dir, script_path = find_generator_script(simulator_dir)
 
     abs_type_dir = os.path.abspath(type_dir)
 

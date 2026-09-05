@@ -9,3 +9,10 @@ pandas
 numpy
 requests
 matplotlib
+gdown
+kaggle
+
+# Method 2 Stage 2 only (frozen Stable Diffusion + ControlNet-style adapter)
+diffusers
+transformers
+accelerate

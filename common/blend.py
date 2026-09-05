@@ -1,12 +1,10 @@
 """
 Shared damage-compositing logic.
 
-This used to be duplicated in three places: composite_damage.py (the
-standalone CLI tool) and inline inside both DegradedPairDataset and
-VAE2PairDataset. That duplication is exactly why the screen/multiply blend
-fix earlier in the project had to be applied in multiple files instead of
-one -- consolidating it here means any future fix (or new blend mode) only
-needs to happen once.
+This is the single source of truth for the screen/multiply blend used to
+composite FilmDamageSimulator masks onto clean images -- imported by the
+standalone composite_damage.py CLI tool and by both DegradedPairDataset
+and VAE2PairDataset, rather than being duplicated in each.
 
 Two blend modes:
   - "screen" (default): damage LIGHTENS toward white. Physically realistic
@@ -21,8 +19,8 @@ import torch
 
 
 def composite_numpy(clean_img: np.ndarray, mask_img: np.ndarray, blend: str = "screen") -> np.ndarray:
-    """For use with OpenCV-style uint8 arrays (e.g. the standalone CLI tool,
-    or quick visual checks). clean_img: (H, W, 3), mask_img: (H, W), both
+    """For OpenCV-style uint8 arrays (e.g. the standalone CLI tool, or
+    quick visual checks). clean_img: (H, W, 3), mask_img: (H, W), both
     uint8. Mask convention: 255 = clean, toward 0 = damaged."""
     import cv2 as cv
 
@@ -46,9 +44,9 @@ def composite_numpy(clean_img: np.ndarray, mask_img: np.ndarray, blend: str = "s
 
 
 def composite_tensor(clean_tensor: torch.Tensor, mask_tensor: torch.Tensor, blend: str = "screen") -> torch.Tensor:
-    """For use inside PyTorch Dataset classes, operating on [0, 1]-range
-    tensors (before the [-1, 1] normalization step). clean_tensor: (C, H, W),
-    mask_tensor: (1, H, W), same convention (255->1.0 = clean, 0 = damaged)."""
+    """For PyTorch Dataset classes, operating on [0, 1]-range tensors
+    (before the [-1, 1] normalization step). clean_tensor: (C, H, W),
+    mask_tensor: (1, H, W), same convention (1.0 = clean, 0 = damaged)."""
     if blend == "screen":
         return 1.0 - (1.0 - clean_tensor) * mask_tensor
     elif blend == "multiply":

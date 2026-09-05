@@ -3,8 +3,8 @@ Standalone CLI: composite a generated damage mask onto a clean target
 image, producing a damaged/clean pair for quick visual checks.
 
 The actual blend math lives in common/blend.py, shared with
-DegradedPairDataset and VAE2PairDataset -- this file is just a thin CLI
-wrapper around it now, not a separate implementation.
+DegradedPairDataset and VAE2PairDataset -- this file is a thin CLI
+wrapper around it, not a separate implementation.
 
 Usage:
     python composite_damage.py --clean path/to/clean.png --mask path/to/mask.png --out path/to/damaged.png
