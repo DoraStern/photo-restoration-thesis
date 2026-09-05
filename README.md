@@ -136,6 +136,9 @@ python data_tools/damage_generation/generate_masks_local.py \
     python data_tools/damage_generation/generate_masks_local.py \
     --types spots --target-n 3000 \
     --out-dir ./data/generated_masks --simulator-dir ./FilmDamageSimulator
+    python data_tools/damage_generation/generate_masks_local.py \
+    --types dirt --target-n 3000 \
+    --out-dir ./data/generated_masks --simulator-dir ./FilmDamageSimulator
 ```
 
 ## Held-out validation and test sets
