@@ -130,15 +130,19 @@ cp data_tools/damage_generation/generate_synthetic_only.py FilmDamageSimulator/d
 python data_tools/damage_generation/generate_masks_local.py \
     --types scratches --target-n 3000 \
     --out-dir ./data/generated_masks --simulator-dir ./FilmDamageSimulator
+    --min-count 8 --max-count 25 --size-variety-min 1.5 --size-variety-max 3.5\
     python data_tools/damage_generation/generate_masks_local.py \
     --types smut --target-n 3000 \
+    --min-count 8 --max-count 25 --size-variety-min 1.5 --size-variety-max 3.5\
     --out-dir ./data/generated_masks --simulator-dir ./FilmDamageSimulator
     python data_tools/damage_generation/generate_masks_local.py \
     --types spots --target-n 3000 \
+    --min-count 8 --max-count 25 --size-variety-min 1.5 --size-variety-max 3.5\
     --out-dir ./data/generated_masks --simulator-dir ./FilmDamageSimulator
     python data_tools/damage_generation/generate_masks_local.py \
     --types dirt --target-n 3000 \
-    --out-dir ./data/generated_masks --simulator-dir ./FilmDamageSimulator
+    --out-dir ./data/generated_masks --simulator-dir ./FilmDamageSimulator\
+    --min-count 8 --max-count 25 --size-variety-min 1.5 --size-variety-max 3.5
 ```
 
 ## Held-out validation and test sets
@@ -176,14 +180,14 @@ shorten an epoch for quick tests, `--amp` for mixed precision,
 ```bash
 python -m method1_gan_vae.train_vae_domain_a \
     --data-root ./data/real_old_photos \
-    --epochs 8 --batch-size 16 --image-size 256 \
+    --epochs 8 --batch-size 16 --image-size 128 \
     --amp --sample-every 50 --save-every 4 \
     --out-dir ./runs/baseline_check/vae_domain_a
 
 python -m method1_gan_vae.train_vae_domain_b \
     --clean-dir ./data/voc2012/VOCdevkit/VOC2012/JPEGImages \
     --masks-dir ./data/generated_masks/scratches ./data/generated_masks/smut \
-    --epochs 8 --batch-size 16 --image-size 256 \
+    --epochs 8 --batch-size 16 --image-size 128 \
     --amp --sample-every 50 --save-every 4 \
     --out-dir ./runs/baseline_check/vae_domain_b
 
@@ -193,7 +197,7 @@ python -m method1_gan_vae.train_translation_net \
     --real-photo-dir ./data/real_old_photos \
     --clean-dir ./data/voc2012/VOCdevkit/VOC2012/JPEGImages \
     --masks-dir ./data/generated_masks/scratches ./data/generated_masks/smut \
-    --epochs 8 --batch-size 16 --image-size 256 \
+    --epochs 8 --batch-size 16 --image-size 128 \
     --sample-every 50 --save-every 4 \
     --out-dir ./runs/baseline_check/translation_net
 
@@ -210,13 +214,13 @@ python -m method1_gan_vae.evaluate --mode synthetic \
 
 ```bash
 python -m method1_gan_vae.train_vae_domain_a \
-    --data-root ./data/real_old_photos --epochs 50 --batch-size 16 --image-size 256 \
+    --data-root ./data/real_old_photos --epochs 50 --batch-size 16 --image-size 128 \
     --amp --out-dir ./runs/vae_domain_a
 
 python -m method1_gan_vae.train_vae_domain_b \
     --clean-dir ./data/voc2012/VOCdevkit/VOC2012/JPEGImages \
     --masks-dir ./data/generated_masks/scratches ./data/generated_masks/smut \
-    --epochs 50 --batch-size 16 --image-size 256 --amp --out-dir ./runs/vae_domain_b
+    --epochs 50 --batch-size 16 --image-size 128 --amp --out-dir ./runs/vae_domain_b
 
 python -m method1_gan_vae.train_translation_net \
     --vae1-checkpoint ./runs/vae_domain_a/checkpoints/<latest>.pt \
@@ -224,7 +228,7 @@ python -m method1_gan_vae.train_translation_net \
     --real-photo-dir ./data/real_old_photos \
     --clean-dir ./data/voc2012/VOCdevkit/VOC2012/JPEGImages \
     --masks-dir ./data/generated_masks/scratches ./data/generated_masks/smut \
-    --epochs 50 --batch-size 16 --image-size 256 --out-dir ./runs/translation_net
+    --epochs 50 --batch-size 16 --image-size 128 --out-dir ./runs/translation_net
 
 python -m method1_gan_vae.evaluate --mode synthetic \
     --vae1-checkpoint ./runs/vae_domain_a/checkpoints/<latest>.pt \
@@ -247,7 +251,7 @@ epochs and a smaller batch size just to confirm the mechanics work):
 python -m method2_diffbir.train_stage1_restoration \
     --clean-dir ./data/voc2012/VOCdevkit/VOC2012/JPEGImages \
     --masks-dir ./data/generated_masks/scratches ./data/generated_masks/smut \
-    --epochs 8 --batch-size 16 --image-size 256 \
+    --epochs 8 --batch-size 16 --image-size 128 \
     --amp --sample-every 50 --save-every 4 \
     --out-dir ./runs/baseline_check/stage1_restoration
 
@@ -261,7 +265,7 @@ python -m method2_diffbir.train_stage2_diffusion \
     --stage1-checkpoint ./runs/baseline_check/stage1_restoration/checkpoints/<latest>.pt \
     --clean-dir ./data/voc2012/VOCdevkit/VOC2012/JPEGImages \
     --masks-dir ./data/generated_masks/scratches ./data/generated_masks/smut \
-    --epochs 2 --batch-size 1 --image-size 256 \
+    --epochs 2 --batch-size 1 --image-size 128 \
     --gradient-checkpointing --amp --sample-every 20 --save-every 1 \
     --out-dir ./runs/baseline_check/stage2_diffusion
 
@@ -279,7 +283,7 @@ python -m method2_diffbir.evaluate_stage2 \
 python -m method2_diffbir.train_stage1_restoration \
     --clean-dir ./data/voc2012/VOCdevkit/VOC2012/JPEGImages \
     --masks-dir ./data/generated_masks/scratches ./data/generated_masks/smut \
-    --epochs 50 --batch-size 16 --image-size 256 --amp --out-dir ./runs/stage1_restoration
+    --epochs 50 --batch-size 16 --image-size 128 --amp --out-dir ./runs/stage1_restoration
 
 python -m method2_diffbir.evaluate \
     --checkpoint ./runs/stage1_restoration/checkpoints/<latest>.pt \
@@ -291,7 +295,7 @@ python -m method2_diffbir.train_stage2_diffusion \
     --stage1-checkpoint ./runs/stage1_restoration/checkpoints/<latest>.pt \
     --clean-dir ./data/voc2012/VOCdevkit/VOC2012/JPEGImages \
     --masks-dir ./data/generated_masks/scratches ./data/generated_masks/smut \
-    --epochs 20 --batch-size 1 --image-size 256 \
+    --epochs 20 --batch-size 1 --image-size 128 \
     --gradient-checkpointing --amp --out-dir ./runs/stage2_diffusion
 
 python -m method2_diffbir.evaluate_stage2 \
@@ -312,8 +316,8 @@ python -m method2_diffbir.evaluate_stage2 \
 python -m method3_transformer.train_transformer_regression \
     --clean-dir ./data/voc2012/VOCdevkit/VOC2012/JPEGImages \
     --masks-dir ./data/generated_masks/scratches ./data/generated_masks/smut \
-    --epochs 8 --batch-size 4 --image-size 256 \
-    --embed-dim 60 --depths "4,4,4,4" --num-heads 6 --window-size 8 \
+    --epochs 8 --batch-size 4 --image-size 128 \
+    --embed-dim 48 --depths "4,4,4,4" --num-heads 6 --window-size 8 \
     --use-checkpoint --amp --sample-every 50 --save-every 4 \
     --out-dir ./runs/baseline_check/transformer_regression
 
@@ -330,8 +334,8 @@ python -m method3_transformer.evaluate \
 python -m method3_transformer.train_transformer_regression \
     --clean-dir ./data/voc2012/VOCdevkit/VOC2012/JPEGImages \
     --masks-dir ./data/generated_masks/scratches ./data/generated_masks/smut \
-    --epochs 50 --batch-size 4 --image-size 256 \
-    --embed-dim 60 --depths "4,4,4,4" --num-heads 6 --window-size 8 \
+    --epochs 50 --batch-size 4 --image-size 128 \
+    --embed-dim 48 --depths "4,4,4,4" --num-heads 6 --window-size 8 \
     --use-checkpoint --amp --out-dir ./runs/transformer_regression
 
 python -m method3_transformer.evaluate \

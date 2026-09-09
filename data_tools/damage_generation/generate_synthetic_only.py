@@ -51,10 +51,11 @@ def sample_closest_in_area(df, target_areas):
     return picked
 
 
-def build_mask(target_size, per_type_dfs, per_type_counts, rescale=True, verbose=False):
+def build_mask(target_size, per_type_dfs, per_type_counts, rescale=True, verbose=False,
+                size_variety=(0.5, 1.8)):
     rescale_factor = (target_size[0] / 2560 if target_size[0] <= target_size[1]
                        else target_size[1] / 2560) if rescale else 1.
-
+ 
     selected_frames = []
     for artifact_type, df in per_type_dfs.items():
         lo, hi = per_type_counts[artifact_type]
@@ -66,44 +67,50 @@ def build_mask(target_size, per_type_dfs, per_type_counts, rescale=True, verbose
         selected_frames.append(picked)
         if verbose:
             print(f"Selected {num} '{artifact_type}' artifacts")
-
+ 
     if not selected_frames:
         raise ValueError("No artifacts selected - check your --types and --min-count/--max-count")
-
+ 
     selected_artifacts_df = pd.concat(selected_frames, ignore_index=True)
     artifacts_num = len(selected_artifacts_df)
-
+ 
     mask_final = np.zeros(target_size).astype(np.uint8)
     perlin_noise = generate_perlin_noise_2d(target_size, (2, 2))
     normalised_noise = (perlin_noise - np.min(perlin_noise)) / np.ptp(perlin_noise)
     xs, ys = random_perlin_with_numpy(artifacts_num, normalised_noise)
     random_angles = np.random.randint(0, 360, size=artifacts_num)
-
+ 
     i = 0
     for _, artifact_row in selected_artifacts_df.iterrows():
         try:
             artifact = artifact_row['Artifact'].astype(np.uint8)
             random_scale = artifact_row['Target size'] / artifact_row['Contour Area']
             random_angle = random_angles[i]
-            new_rescale_factor = rescale_factor * np.sqrt(random_scale)
+            # size_variety adds an independent random multiplier on top of the
+            # gamma-fit-based scale above -- without this, size variety is
+            # entirely bounded by whatever area distribution the raw artifact
+            # patches happen to have, which can look narrower than intended if
+            # the patch library itself is fairly uniform in size.
+            variety_factor = np.random.uniform(size_variety[0], size_variety[1])
+            new_rescale_factor = rescale_factor * np.sqrt(random_scale) * variety_factor
             artifact = skimage_tf.rescale(artifact, round(new_rescale_factor, 2), anti_aliasing=True, preserve_range=True)
             artifact = skimage_tf.rotate(artifact, angle=random_angle, resize=True, preserve_range=True)
             artifact_w, artifact_h = artifact.shape[:2]
-
+ 
             x1 = xs[i] - artifact_w // 2
             x2 = x1 + artifact_w
             if x1 < 0:
                 artifact = artifact[-x1:, :]; x1 = 0
             if x2 > target_size[0]:
                 artifact = artifact[:-(x2 - target_size[0]), :]; x2 = target_size[0]
-
+ 
             y1 = ys[i] - artifact_h // 2
             y2 = y1 + artifact_h
             if y1 < 0:
                 artifact = artifact[:, -y1:]; y1 = 0
             if y2 > target_size[1]:
                 artifact = artifact[:, :-(y2 - target_size[1])]; y2 = target_size[1]
-
+ 
             mask_final[x1:x2, y1:y2] = np.where(
                 artifact > mask_final[x1:x2, y1:y2], artifact, mask_final[x1:x2, y1:y2]
             )
@@ -111,12 +118,13 @@ def build_mask(target_size, per_type_dfs, per_type_counts, rescale=True, verbose
         except Exception:
             i += 1
             continue
-
+ 
     mask_final = np.invert(mask_final.astype(np.uint8))
     binarised = ((mask_final > 240) * 255).astype(np.uint8)
     return mask_final.astype(np.uint8), binarised
 
 
+ 
 def add_procedural_scratches(mask, height, width, verbose=False):
     """Blend in fully procedural (Perlin-noise-based) scratch lines.
     These require NO source images at all -- real or synthetic -- so they
@@ -138,8 +146,8 @@ def add_procedural_scratches(mask, height, width, verbose=False):
     if verbose:
         print(f"Added {num_extra_scratch} procedural scratch lines")
     return mask
-
-
+ 
+ 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Generate damage masks from ONLY classified synthetic patches (no scanned frames).'
@@ -151,6 +159,13 @@ if __name__ == '__main__':
     parser.add_argument('--width', type=int, default=1024)
     parser.add_argument('--min-count', type=int, default=3, help='min number of artifacts per type')
     parser.add_argument('--max-count', type=int, default=15, help='max number of artifacts per type')
+    parser.add_argument('--size-variety-min', type=float, default=0.5,
+                         help="minimum extra random size multiplier applied per artifact, independent of "
+                              "the patch library's own area distribution -- lower values allow smaller "
+                              "damage instances")
+    parser.add_argument('--size-variety-max', type=float, default=1.8,
+                         help="maximum extra random size multiplier applied per artifact -- higher values "
+                              "allow larger damage instances")
     parser.add_argument('--procedural-scratches', action='store_true',
                          help='also blend in fully procedural line scratches (no source image needed)')
     parser.add_argument('--n', type=int, default=1, help='how many masks to generate')
@@ -161,38 +176,40 @@ if __name__ == '__main__':
                               'physically separate folders instead of one mixed pool.')
     parser.add_argument('--verbose', action='store_true')
     args = parser.parse_args()
-
+ 
     abs_path = os.path.abspath(os.path.dirname(__file__))
     synthetic_path = os.path.dirname(os.path.normpath(abs_path)) + '/synthetic/'
     out_dir = args.out_dir if args.out_dir else os.path.dirname(os.path.normpath(abs_path)) + '/generated/'
     if not out_dir.endswith('/'):
         out_dir += '/'
     os.makedirs(out_dir, exist_ok=True)
-
+ 
     types = [t.strip() for t in args.types.split(',') if t.strip()]
-
+ 
     per_type_dfs = {}
     for t in types:
         df = load_images(synthetic_path, t, verbose=args.verbose)
         df['Contour Area'] = df['Non-zero pixel area']
         per_type_dfs[t] = df
         print(f"Loaded {len(df)} '{t}' artifact patches from /synthetic/{t}/")
-
+ 
     per_type_counts = {t: (args.min_count, args.max_count) for t in types}
-
+ 
     for n in range(args.n):
         mask, binary_mask = build_mask(
-            (args.height, args.width), per_type_dfs, per_type_counts, verbose=args.verbose
+            (args.height, args.width), per_type_dfs, per_type_counts, verbose=args.verbose,
+            size_variety=(args.size_variety_min, args.size_variety_max)
         )
-
+ 
         if args.procedural_scratches:
             mask = add_procedural_scratches(mask, args.height, args.width, verbose=args.verbose)
             binary_mask = ((mask > 240) * 255).astype(np.uint8)
-
+ 
         uid = str(uuid.uuid4())[:8]
         tag = "_".join(types)
         cv.imwrite(out_dir + f'mask_{tag}_{uid}.png', mask)
         cv.imwrite(out_dir + f'binarised_mask_{tag}_{uid}.png', binary_mask)
         print(f"[{n+1}/{args.n}] Saved mask_{tag}_{uid}.png")
-
+ 
     print(f"Done. Masks written to {out_dir}")
+ 
